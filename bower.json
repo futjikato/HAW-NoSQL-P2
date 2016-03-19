@@ -1,0 +1,8 @@
+{
+  "name": "nosql-prak2-redis",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "uikit": "^2.25.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "nosql-prak2-redis",
+  "version": "0.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "hapi": "^13.2.1",
+    "inert": "^3.2.0",
+    "minimist": "^1.2.0",
+    "redis": "^2.5.2"
+  }
+}

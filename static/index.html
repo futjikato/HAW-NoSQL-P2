@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>P2</title>
+
+        <!-- fancy -->
+        <link href="/static/bower_components/uikit/css/uikit.css" rel="stylesheet">
+        <!-- use for adjustments -->
+        <link href="/static/main.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="uk-container uk-container-center">
+            <h1>NoSQL - Redis</h1>
+            <div class="uk-grid">
+
+                <!-- postal form -->
+                <div class="uk-width-1-2">
+                    <h2>Search by postal code</h2>
+                    <form class="js-search-postal uk-form uk-form-stacked">
+                        <div class="uk-form-row">
+                            <label class="uk-form-label" for="postal">Postal</label>
+                            <div class="uk-form-controls">
+                                <input type="text" name="postal" id="postal">
+                                <p class="js-error-postal uk-form-help-block uk-hidden"></p>
+                            </div>
+                        </div>
+                        <div class="uk-form-row">
+                            <button type="submit" class="uk-button uk-button-primary">Search</button>
+                        </div>
+                    </form>
+
+                    <h2>Search by city name</h2>
+                    <form class="js-search-city uk-form uk-form-stacked">
+                        <div class="uk-form-row">
+                            <label class="uk-form-label" for="city">City</label>
+                            <div class="uk-form-controls">
+                                <input type="text" name="city" id="city">
+                                <p class="js-error-city uk-form-help-block uk-hidden"></p>
+                            </div>
+                        </div>
+                        <div class="uk-form-row">
+                            <button type="submit" class="uk-button uk-button-primary">Search</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- postal search result with map -->
+                <div class="uk-width-1-2">
+                    <h2>Result</h2>
+                    <div class="gmap js-map-postal"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- good old jq -->
+        <script src="/static/bower_components/jquery/dist/jquery.min.js"></script>
+        <!-- Load own app -->
+        <script src="/static/app.js"></script>
+        <!-- async load maps -->
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDE-ZitDkrVSiK8wOmBj5XBmxoDu94HVNk&callback=initMap" async defer></script>
+    </body>
+</html>
