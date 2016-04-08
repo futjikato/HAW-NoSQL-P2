@@ -17,6 +17,7 @@ if (argv.flushdb) {
 argv._.forEach(function(file) {
     importFile(file);
 });
+
 client.unref();
 
 function importFile(file) {
@@ -31,6 +32,7 @@ function importFile(file) {
 
 function parseStrSync(str) {
     var offset = 0;
+    var cityPlzMap = {};
     while (str.indexOf("\n", offset) !== -1) {
         var endPos = str.indexOf("\n", offset);
         var part = str.substr(offset, endPos - offset);
@@ -38,18 +40,22 @@ function parseStrSync(str) {
             var jsonData = JSON.parse(part),
                 entryId = jsonData._id;
 
-            client.hset(entryId, "city", jsonData.city);
-            client.hset(entryId, "loc", JSON.stringify(jsonData.loc));
-            client.hset(entryId, "pop", jsonData.pop);
-            client.hset(entryId, "state", jsonData.state);
-            console.log('Saved data for postal code', entryId);
+            client.hmset(entryId, "city", jsonData.city, "loc", JSON.stringify(jsonData.loc), "pop", jsonData.pop, "state", jsonData.state);
 
-            client.set(jsonData.city, entryId);
-            console.log('Saved reverse map', jsonData.city);
+            if (!cityPlzMap[jsonData.city]) {
+                cityPlzMap[jsonData.city] = [];
+            }
+            cityPlzMap[jsonData.city].push(entryId);
         } catch (err) {
             console.log('Error parsing', part, err);
         }
         offset = endPos + 1;
+    }
+
+    for (var key in cityPlzMap) {
+        if (cityPlzMap.hasOwnProperty(key)) {
+            client.set(key, JSON.stringify(cityPlzMap[key]));
+        }
     }
 
     if (offset < str.length) {

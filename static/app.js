@@ -1,4 +1,4 @@
-(function(window, $) {
+(function(window, $, UIkit) {
     var postalMap,
         postalMapMarker,
         postalInfoWindow;
@@ -54,9 +54,25 @@
 
         var cityElem = $('input[name="city"]');
         var cityErrorElem = $('.js-error-city');
+        var selectionElem = $('.js-selection');
 
         $.getJSON('/city/' + cityElem.val(), function(data) {
-            handlePostalData(data, cityElem, cityErrorElem);
+            data.forEach(function(keyData) {
+                selectionElem.append($('<option>').attr('value', JSON.stringify(keyData)).text(keyData.plz));
+            });
         });
-    })
-})(window, jQuery);
+    });
+    
+    $('.js-selection').on('change', function(e) {
+        var elem = $(this);
+        var cityErrorElem = $('.js-error-city');
+        var cityElem = $('input[name="city"]');
+        var data = JSON.parse(elem.val());
+        handlePostalData(data, cityElem, cityErrorElem);
+    });
+
+    var postalElem = $('input[name="postal"]')
+    UIkit.autocomplete(postalElem.get(0), { source: function() {
+        return '/search/postal/'+postalElem.val();
+    }});
+})(window, jQuery, UIkit);

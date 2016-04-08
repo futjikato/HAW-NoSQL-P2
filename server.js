@@ -40,7 +40,34 @@ server.route({
             } else if(!data) {
                 reply({err: new Error('Nothing found').toString()});
             } else {
-                loadPostalData(data, reply);
+                var ary = JSON.parse(data);
+                var doneCount = 0;
+                var replyCollection = [];
+                ary.forEach(function(plzKey) {
+                    loadPostalData(plzKey, function(plzData) {
+                        plzData.plz = plzKey;
+                        replyCollection.push(plzData);
+                        if (++doneCount >= ary.length) {
+                            reply(replyCollection);
+                        }
+                    });
+                });
+            }
+        });
+    }
+});
+
+server.route({
+    method: 'GET',
+    path: '/search/postal/{query}',
+    handler: function(req, reply) {
+        client.keys(req.params.query+'*', function(err, data) {
+            if (err) {
+                reply({err: err.toString()});
+            } else if(!data) {
+                reply({err: new Error('Nothing found').toString()});
+            } else {
+                reply(data);
             }
         });
     }

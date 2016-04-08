@@ -40,6 +40,14 @@
                             </div>
                         </div>
                         <div class="uk-form-row">
+                            <label class="uk-form-label" for="selection">Auswahl</label>
+                            <div class="uk-form-controls">
+                                <select id="selection" name="selection" class="js-selection">
+                                    <option value="">---</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="uk-form-row">
                             <button type="submit" class="uk-button uk-button-primary">Search</button>
                         </div>
                     </form>
@@ -55,6 +63,8 @@
 
         <!-- good old jq -->
         <script src="/static/bower_components/jquery/dist/jquery.min.js"></script>
+        <script src="/static/bower_components/uikit/js/uikit.min.js"></script>
+        <script src="/static/bower_components/uikit/js/components/autocomplete.min.js"></script>
         <!-- Load own app -->
         <script src="/static/app.js"></script>
         <!-- async load maps -->
