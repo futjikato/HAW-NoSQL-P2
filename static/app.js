@@ -27,7 +27,13 @@
         inputElem.removeClass('uk-form-danger');
         errorElem.addClass('uk-hidden');
 
-        var posAry = JSON.parse(data.loc);
+        var posAry;
+        if (Array.isArray(data.loc)) {
+            posAry = data.loc;
+        } else {
+            posAry = JSON.parse(data.loc);
+        }
+
         postalMapMarker.setPosition({lat: posAry[1], lng: posAry[0]});
         postalMapMarker.setTitle(data.city);
         postalMapMarker.setMap(postalMap);
@@ -38,13 +44,23 @@
         postalMap.setZoom(10);
     }
 
+    var backend = 'redis';
+    $('.js-backend').on('click', function(e) {
+        e.preventDefault();
+
+        $('.js-backend.uk-active').removeClass('uk-active');
+        $(this).addClass('uk-active');
+
+        backend = $(this).data('backend');
+    });
+
     $('.js-search-postal').on('submit', function(e) {
         e.preventDefault();
 
         var postalElem = $('input[name="postal"]');
         var postalErrorElem = $('.js-error-postal');
 
-        $.getJSON('/postal/' + postalElem.val(), function(data) {
+        $.getJSON('/postal/' + backend + '/' + postalElem.val(), function(data) {
             handlePostalData(data, postalElem, postalErrorElem);
         });
     });
@@ -53,12 +69,19 @@
         e.preventDefault();
 
         var cityElem = $('input[name="city"]');
-        var cityErrorElem = $('.js-error-city');
         var selectionElem = $('.js-selection');
 
-        $.getJSON('/city/' + cityElem.val(), function(data) {
-            data.forEach(function(keyData) {
-                selectionElem.append($('<option>').attr('value', JSON.stringify(keyData)).text(keyData.plz));
+        $.getJSON('/city/' + backend + '/' + cityElem.val(), function(data) {
+            data.forEach(function(keyData, i) {
+                var label;
+                if (keyData.plz) {
+                    label = keyData.plz;
+                } else if (keyData._id) {
+                    label = keyData._id;
+                } else {
+                    label = '#'+i;
+                }
+                selectionElem.append($('<option>').attr('value', JSON.stringify(keyData)).text(label));
             });
         });
     });
@@ -70,9 +93,4 @@
         var data = JSON.parse(elem.val());
         handlePostalData(data, cityElem, cityErrorElem);
     });
-
-    var postalElem = $('input[name="postal"]')
-    UIkit.autocomplete(postalElem.get(0), { source: function() {
-        return '/search/postal/'+postalElem.val();
-    }});
 })(window, jQuery, UIkit);
