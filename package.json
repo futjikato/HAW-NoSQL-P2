@@ -6,10 +6,9 @@
     "debug": "^2.2.0",
     "es6-promise": "^3.1.2",
     "hapi": "^13.2.1",
+    "hbase": "^0.2.2",
     "inert": "^3.2.0",
     "minimist": "^1.2.0",
-    "mongodb": "^2.1.16",
-    "redis": "^2.5.2",
     "timer-stopwatch": "^0.2.0"
   }
 }

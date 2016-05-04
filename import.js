@@ -1,81 +1,19 @@
 var Promise = require('es6-promise').Promise,
-    redis = require('redis'),
-    MongoClient = require('mongodb').MongoClient,
+    hbase = require('hbase'),
     fs = require('fs'),
     argv = require('minimist')(process.argv.slice(2), {
         alias: { d: 'flushdb' },
-        boolean: ['flushdb', 'redis', 'mongo']
+        boolean: ['flushdb']
     }),
     debug = require('debug'),
     fsDebug = debug('fs:debug'),
     fsError = debug('fs:error');
 
-var redisModel = {
+var hbaseModel = {
     logDebug: false,
     logError: false,
-    client: false,
-
-    cityPlzMap: {},
-
-    init: function() {
-        var model = this;
-        return new Promise(function(resolve) {
-            model.logDebug = debug('redis:debug');
-            model.logError = debug('redis:error');
-
-            model.logDebug('init');
-
-            model.client = redis.createClient();
-
-            model.client.on('error', function (err) {
-                model.logError(err);
-            });
-
-            model.client.unref();
-
-            resolve();
-        });
-    },
-
-    addEntry: function(entryId, jsonData) {
-        var model = this;
-        return new Promise(function(resolve) {
-            model.logDebug('add entry for %s', entryId);
-            model.client.hmset(entryId, "city", jsonData.city, "loc", JSON.stringify(jsonData.loc), "pop", jsonData.pop, "state", jsonData.state);
-
-            if (!model.cityPlzMap[jsonData.city]) {
-                model.cityPlzMap[jsonData.city] = [];
-            }
-            model.cityPlzMap[jsonData.city].push(entryId);
-
-            resolve();
-        });
-    },
-
-    finishImport: function() {
-        this.logDebug('Insert city to postal maps.');
-        for (var key in this.cityPlzMap) {
-            if (this.cityPlzMap.hasOwnProperty(key)) {
-                this.client.set(key, JSON.stringify(this.cityPlzMap[key]));
-            }
-        }
-    },
-
-    flushdb: function() {
-        var model = this;
-        return new Promise(function(resolve) {
-            model.logDebug('Flush database');
-            model.client.flushdb();
-            resolve();
-        });
-    }
-};
-
-var mongoModel = {
-    logDebug: false,
-    logError: false,
-    db : false,
-    collection: false,
+    client : false,
+    plzTable: false,
 
     init: function() {
         var model = this;
@@ -84,17 +22,13 @@ var mongoModel = {
             model.logDebug = debug('mongo:debug');
             model.logError = debug('mongo:error');
 
-            var url = 'mongodb://localhost:27017/postal';
-            MongoClient.connect(url, function (err, db) {
-                if(err) {
-                    reject(err);
-                    return;
-                }
+            model.client = new hbase.Client({ host: '127.0.0.1', port: 8080 });
+            model.plzTable = new hbase.Table(model.client, 'plz');
 
-                model.logDebug('db connection established');
-                model.db = db;
-                model.collection = db.collection('postals');
-                resolve();
+            model.plzTable.exists(function(err, data) {
+                console.log(err);
+                console.log(data);
+                reject(Error('Testing'));
             });
         });
     },
@@ -169,15 +103,8 @@ var activeModelList = [];
 var sequence = Promise.resolve();
 
 sequence.then(function() {
-    if (argv.redis) {
-        activeModelList.push(redisModel);
-        return redisModel.init();
-    }
-}).then(function() {
-    if (argv.mongo) {
-        activeModelList.push(mongoModel);
-        return mongoModel.init();
-    }
+    activeModelList.push(hbaseModel);
+    return hbaseModel.init();
 }).then(function() {
     if (argv.flushdb) {
         var flushPromises = [];
