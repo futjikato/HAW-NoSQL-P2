@@ -1,0 +1,14 @@
+version: '2'
+services:
+  hbase:
+    image: hyness/hbase-rest-standalone:latest
+    ports:
+      - "8080:8080"
+      - "2181:2182"
+      - "16000:16000"
+      - "16010:16010"
+      - "16020:16020"
+      - "16030:16030"
+    volumes:
+      - "./data/hbase:/data/hbase"
+      - "./data/zookeeper:/data/zookeeper"

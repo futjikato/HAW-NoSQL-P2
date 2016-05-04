@@ -19,32 +19,69 @@ var hbaseModel = {
         var model = this;
         return new Promise(function(resolve, reject) {
 
-            model.logDebug = debug('mongo:debug');
-            model.logError = debug('mongo:error');
+            model.logDebug = debug('hbase:debug');
+            model.logError = debug('hbase:error');
 
-            model.client = new hbase.Client({ host: '127.0.0.1', port: 8080 });
+            model.client = new hbase.Client({ host: process.env.HBASEHOST, port: 8080 });
             model.plzTable = new hbase.Table(model.client, 'plz');
 
             model.plzTable.exists(function(err, data) {
-                console.log(err);
-                console.log(data);
-                reject(Error('Testing'));
+                if (err)
+                    return reject(err);
+
+                if (data === false) {
+                    model.logDebug('create table...');
+                    model.plzTable.create({
+                        ColumnSchema: [
+                            {
+                                name: 'location'
+                            },
+                            {
+                                name: 'Fussball'
+                            }
+                        ]
+                    }, function(err) {
+                        if (err)
+                            return reject(err);
+
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
             });
         });
     },
 
-    flushdb: function() {
-        this.logDebug('Flush database');
-        return this.collection.deleteMany({});
-    },
-
     addEntry: function(entryId, jsonData) {
-        this.logDebug('add entry for %s', entryId);
-        return this.collection.insertOne(jsonData);
+        var model = this;
+        return new Promise(function(resolve, reject) {
+            model.logDebug('add entry for %s', entryId);
+            var cells = [
+                {column: 'location:plz', $: entryId},
+                {column: 'location:city', $: jsonData.city},
+                {column: 'location:lat', $: jsonData.loc[0]},
+                {column: 'location:lng', $: jsonData.loc[1]},
+                {column: 'location:pop', $: jsonData.pop},
+                {column: 'location:state', $: jsonData.state}
+            ];
+
+            if (jsonData.city === 'HAMBURG' || jsonData.city === 'BREMEN') {
+                model.logDebug('Add Fussball column');
+                cells.push({column : 'Fussball:played', $: 'ja'});
+            }
+
+            model.plzTable.row(entryId).put(cells, function(err) {
+                if (err)
+                    return reject(err);
+
+                resolve();
+            });
+        });
     },
 
     finishImport: function() {
-        this.db.close();
+        // nothing to do here
     }
 };
 
@@ -105,14 +142,6 @@ var sequence = Promise.resolve();
 sequence.then(function() {
     activeModelList.push(hbaseModel);
     return hbaseModel.init();
-}).then(function() {
-    if (argv.flushdb) {
-        var flushPromises = [];
-        activeModelList.forEach(function(model) {
-            flushPromises.push(model.flushdb());
-        });
-        return Promise.all(flushPromises);
-    }
 }).then(function() {
     var importPromiseList = [];
     argv._.forEach(function(file) {
