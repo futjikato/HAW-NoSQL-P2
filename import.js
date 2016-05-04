@@ -60,9 +60,9 @@ var hbaseModel = {
             var cells = [
                 {column: 'location:plz', $: entryId},
                 {column: 'location:city', $: jsonData.city},
-                {column: 'location:lat', $: jsonData.loc[0]},
-                {column: 'location:lng', $: jsonData.loc[1]},
-                {column: 'location:pop', $: jsonData.pop},
+                {column: 'location:lat', $: jsonData.loc[0].toString()},
+                {column: 'location:lng', $: jsonData.loc[1].toString()},
+                {column: 'location:pop', $: jsonData.pop.toString()},
                 {column: 'location:state', $: jsonData.state}
             ];
 

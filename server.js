@@ -1,123 +1,84 @@
 var Hapi = require('hapi'),
-    redis = require('redis'),
     Stopwatch = require('timer-stopwatch'),
-    MongoClient = require('mongodb').MongoClient,
+    hbase = require('hbase'),
     fs = require('fs'),
-    redisDebug = require('debug')('redis'),
-    mongoDebug = require('debug')('mongo');
+    hbaseDebug = require('debug')('hbase');
 
-var redisClient = redis.createClient();
+var client = new hbase.Client({ host: process.env.HBASEHOST, port: 8080 });
+var plzTable = new hbase.Table(client, 'plz');
 
 var server = new Hapi.Server();
 server.connection({
-    port: 8080
-});
-
-function loadRedisPostalData(postal, reply) {
-    redisDebug('call hgetall for postal %s', postal);
-    redisClient.hgetall(postal, function(err, data) {
-        redisDebug('result %j for hgetall postal %s', data, postal);
-        if (err) {
-            reply({err: err.toString()});
-        } else if(!data) {
-            reply({err: new Error('Nothing found').toString()});
-        } else {
-            reply(data);
-        }
-    });
-}
-
-server.route({
-    method: 'GET',
-    path: '/postal/redis/{postal}',
-    handler: function(request, reply) {
-        loadRedisPostalData(request.params.postal, reply);
-    }
+    port: 8090
 });
 
 server.route({
     method: 'GET',
-    path: '/city/redis/{city}',
+    path: '/postal/hbase/{postal}',
     handler: function(request, reply) {
-        var city = request.params.city;
-        var sw = new Stopwatch();
-        redisDebug('call get for city', city);
-        sw.start();
-        redisClient.get(city, function(err, data) {
-            redisDebug('result postal for city %s', city);
+        var postal = request.params.postal;
+        plzTable.row(postal).get(function(err, data) {
             if (err) {
                 reply({err: err.toString()});
             } else if(!data) {
                 reply({err: new Error('Nothing found').toString()});
             } else {
-                var ary = JSON.parse(data);
-                var doneCount = 0;
-                var replyCollection = [];
-                ary.forEach(function(plzKey) {
-                    loadRedisPostalData(plzKey, function(plzData) {
-                        plzData.plz = plzKey;
-                        replyCollection.push(plzData);
-                        if (++doneCount >= ary.length) {
-                            sw.stop();
-                            redisDebug('fetched %d results for city %s in %dms', ary.length, city, sw.ms);
-                            reply(replyCollection);
-                        }
-                    });
+                var resObj = {};
+                data.forEach(function(col) {
+                    var fullColName = col.column.toString();
+                    var columnNameSplit = fullColName.split(':');
+                    resObj[columnNameSplit[1]] = col.$.toString();
                 });
+                reply(resObj);
             }
         });
     }
 });
 
-var url = 'mongodb://localhost:27017/postal';
-MongoClient.connect(url, function(err, db) {
-    if (err)
-        throw err;
+server.route({
+    method: 'GET',
+    path: '/city/hbase/{city}',
+    handler: function(request, reply) {
+        var city = request.params.city;
+        hbaseDebug(city);
+        plzTable.scan({
+            filter: {
+                "op": "EQUAL",
+                "type": "SingleColumnValueFilter",
+                "family": new Buffer("location").toString('base64'),
+                "qualifier": new Buffer("city").toString('base64'),
+                "comparator":{"value": city, "type": "BinaryComparator"}
+            }
+        }, function(err, data) {
+            if (data)
+                hbaseDebug(data);
 
-    mongoDebug('mongo connection established');
-    var postalcollection = db.collection('postals');
+            if (err) {
+                reply({err: err.toString()});
+            } else if (Array.isArray(data)) {
+                var resObj = {};
+                data.forEach(function(rowData) {
+                    var row = rowData.key.toString();
+                    if (!resObj[row]) {
+                        resObj[row] = {};
+                    }
 
-    server.route({
-        method: 'GET',
-        path: '/postal/mongo/{postal}',
-        handler: function(request, reply) {
-            var postal = request.params.postal;
-            mongoDebug('call find for postal %d', postal);
-            postalcollection.find({_id: postal}).limit(1).next(function(err, data) {
-                if (err) {
-                    mongoDebug('err for postal %d => %j', postal, err);
-                    reply({err: err.toString()});
-                } else if (!data) {
-                    mongoDebug('nothing found for postal %d', postal);
-                    reply({err: new Error('Nothing found').toString()});
-                } else {
-                    mongoDebug('found entry %j for postal %d', data, postal);
-                    reply(data);
+                    var fullColName = rowData.column.toString();
+                    var columnNameSplit = fullColName.split(':');
+                    resObj[row][columnNameSplit[1]] = rowData.$.toString();
+                });
+
+                var resAry = [];
+                for (var key in resObj) {
+                    if (resObj.hasOwnProperty(key)) {
+                        resAry.push(resObj[key]);
+                    }
                 }
-            });
-        }
-    });
 
-    server.route({
-        method: 'GET',
-        path: '/city/mongo/{city}',
-        handler: function (request, reply) {
-            var city = request.params.city;
-            mongoDebug('call find for city %s', city);
-            postalcollection.find({city: city}).toArray(function(err, data) {
-                if (err) {
-                    mongoDebug('err for city %s => %j', city, err);
-                    reply({err: err.toString()});
-                } else if (!data) {
-                    mongoDebug('nothing found for city %s', city);
-                    reply({err: new Error('Nothing found').toString()});
-                } else {
-                    mongoDebug('found %d entries for city %s', data.length, city);
-                    reply(data);
-                }
-            });
-        }
-    });
+                reply(resAry);
+            }
+        })
+    }
 });
 
 server.register(require('inert'), function(err) {

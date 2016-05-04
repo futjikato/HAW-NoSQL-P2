@@ -28,10 +28,17 @@
         errorElem.addClass('uk-hidden');
 
         var posAry;
-        if (Array.isArray(data.loc)) {
-            posAry = data.loc;
+        if (data.lat && data.lng) {
+            posAry = [
+                parseFloat(data.lat),
+                parseFloat(data.lng)
+            ];
         } else {
-            posAry = JSON.parse(data.loc);
+            if (Array.isArray(data.loc)) {
+                posAry = data.loc;
+            } else {
+                posAry = JSON.parse(data.loc);
+            }
         }
 
         postalMapMarker.setPosition({lat: posAry[1], lng: posAry[0]});
@@ -44,7 +51,7 @@
         postalMap.setZoom(10);
     }
 
-    var backend = 'redis';
+    var backend = 'hbase';
     $('.js-backend').on('click', function(e) {
         e.preventDefault();
 
